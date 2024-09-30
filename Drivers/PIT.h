@@ -14,19 +14,18 @@
 #include "board.h"
 #include "fsl_pit.h"
 
-#define DEMO_PIT_BASEADDR PIT
-#define DEMO_PIT_CHANNEL  kPIT_Chnl_0
-#define PIT_HANDLER   PIT0_IRQHandler
-#define PIT_IRQ_ID        PIT0_IRQn
+#define PIT_BASEADDR PIT
+
 /* Get source clock for PIT driver */
 #define PIT_SOURCE_CLOCK CLOCK_GetFreq(kCLOCK_BusClk)
 
-void PIT_HANDLER(void);
+void PIT0_IRQHandler(void);
+void PIT1_IRQHandler(void);
 
 void PIT_Start(void);
 
-void PIT_Change_Period(uint16_t period);
+void PIT_Change_Period(uint16_t period, pit_chnl_t channel);
 
-void PIT_SetCallback(void (*callback)(void));
+void PIT_SetCallback(void (*callback)(void), pit_chnl_t channel);
 
 #endif /* PIT_H_ */
