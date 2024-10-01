@@ -14,20 +14,28 @@
 #include "Drivers/PIT.h"
 #include "Drivers/DAC.h"
 
-uint8_t sec, min, hour;
+#define PI 3.1416
+#define PERIODO_ALARMA 2
+
+uint16_t ms, sec, min, hour;
 uint32_t dacValue;
-uint32_t sineValues [20];
+uint32_t sineValues [360];
+uint8_t index;
 
 void Clock_Time(void){
-	sec++;
-	if(sec == 60){
-		min++;
-		sec = 0;
-		if(min == 60){
-			hour++;
-			min = 0;
-			if(hour == 24){
-				hour = 0;
+	ms++;
+	if(ms == 1000){
+		sec++;
+		ms = 0;
+		if(sec == 60){
+			min++;
+			sec = 0;
+			if(min == 60){
+				hour++;
+				min = 0;
+				if(hour == 24){
+					hour = 0;
+				}
 			}
 		}
 	}
@@ -35,17 +43,17 @@ void Clock_Time(void){
 
 void Get_Sine_Values(void){
 	for (int i = 0; i < 360; ++i) {
-		if(i % (360 / 20) != 0){
-			sineValues[i] = (uint32_t)floor(2047 * sin(i) + 2047);
-		}
+		sineValues[i] = (uint32_t)floor(2047.5 * sinf(i * (PI / 30)) + 2047.5);
 	}
 }
 
 void Alarm(void){
-	uint8_t i = 0;
-
-	//10khz, 5us por muestra, 20 muestras
-	dacValue = sineValues[(i == 20) ? (i = 0) : (i++)];
+	if(ms >= 500){
+		dacValue = sineValues[(index == 360) ? (index = 0) : (index++)];
+	}
+	else{
+		dacValue = 0;
+	}
 	DAC_Update_Val(dacValue);
 }
 
@@ -54,11 +62,13 @@ int main(void) {
 	DAC_Start();
 	Get_Sine_Values();
 
-	PIT_Change_Period(USEC_TO_COUNT(1000000U, PIT_SOURCE_CLOCK), kPIT_Chnl_0);
+	PIT_Change_Period(USEC_TO_COUNT(1000U, PIT_SOURCE_CLOCK), kPIT_Chnl_0);
 	PIT_SetCallback(Clock_Time, kPIT_Chnl_0);
 
-	PIT_Change_Period(USEC_TO_COUNT(5U, PIT_SOURCE_CLOCK), kPIT_Chnl_1);
+	PIT_Change_Period(USEC_TO_COUNT(PERIODO_ALARMA, PIT_SOURCE_CLOCK), kPIT_Chnl_1);
 	PIT_SetCallback(Alarm, kPIT_Chnl_1);
+
+	while(1);
 
 	return 0;
 }
