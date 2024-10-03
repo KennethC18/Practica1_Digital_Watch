@@ -13,9 +13,10 @@
 #include "math.h"
 #include "Drivers/PIT.h"
 #include "Drivers/DAC.h"
+#include "Drivers/LED_RGB.h"
 
 #define PI 3.1416
-#define PERIODO_ALARMA 2
+#define PERIODO_ALARMA 5
 
 uint16_t ms, sec, min, hour;
 uint32_t dacValue;
@@ -48,18 +49,21 @@ void Get_Sine_Values(void){
 }
 
 void Alarm(void){
-	if(ms >= 500){
-		dacValue = sineValues[(index == 360) ? (index = 0) : (index++)];
-	}
-	else{
-		dacValue = 0;
-	}
+	MAGENTA_LED();
+    if(((ms >= 250) && (ms <= 500)) || ((ms >= 750) && (ms <= 1000))){
+    	dacValue = 0;
+    }
+    else{
+    	dacValue = sineValues[index];
+    }
 	DAC_Update_Val(dacValue);
+    (index == 360) ? (index = 0) : (index++);
 }
 
 int main(void) {
 	PIT_Start();
 	DAC_Start();
+	LED_Init();
 	Get_Sine_Values();
 
 	PIT_Change_Period(USEC_TO_COUNT(1000U, PIT_SOURCE_CLOCK), kPIT_Chnl_0);
@@ -69,6 +73,5 @@ int main(void) {
 	PIT_SetCallback(Alarm, kPIT_Chnl_1);
 
 	while(1);
-
 	return 0;
 }
