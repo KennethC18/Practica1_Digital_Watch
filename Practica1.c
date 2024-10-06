@@ -17,19 +17,25 @@
 #include "Drivers/display.h"
 
 #define PI 3.1416
-#define PERIODO_ALARMA 5
 
 uint16_t us, ms, sec, min, hour;
+uint8_t dispClock;
+
 uint32_t dacValue;
 uint32_t sineValues [360];
 uint8_t index;
 
 uint8_t alarmHour, alarmMin;
+uint8_t dispAlarm;
 uint8_t alarmEnable;
+bool alarm_enabled = false;
+
+uint16_t us_stpwtch, ms_stpwtch, sec_stpwtch, min_stpwtch, hour_stpwtch;
+uint8_t dispStp;
 
 void Clock_Time(void){
 	us++;
-	if(us == 100){
+	if(us == 250){
 		ms++;
 		us = 0;
 		if(ms == 1000){
@@ -50,6 +56,24 @@ void Clock_Time(void){
 	}
 }
 
+void Stopwatch_Time(){
+	us_stpwtch++;
+	if(us_stpwtch == 250){
+		ms_stpwtch++;
+		us_stpwtch = 0;
+		if(ms_stpwtch == 1000){
+			sec_stpwtch++;
+			ms_stpwtch = 0;
+			if(sec_stpwtch == 60){
+				min_stpwtch++;
+				sec_stpwtch = 0;
+				if(min_stpwtch == 60){
+				}
+			}
+		}
+	}
+}
+
 void Get_Sine_Values(void){
 	for (int i = 0; i < 360; ++i) {
 		sineValues[i] = (uint32_t)floor(2047.5 * sinf(i * (PI / 30)) + 2047.5);
@@ -64,7 +88,7 @@ void Alarm_Sound(void){
     	dacValue = sineValues[index];
     }
 	DAC_Update_Val(dacValue);
-    (index == 360) ? (index = 0) : (index+=6);
+    (index == 360) ? (index = 0) : (index += 5);
 }
 
 void Alarm_Enable(){
@@ -78,45 +102,104 @@ void Alarm_Enable(){
 }
 
 void Alarm(void){
-	if((alarmEnable == 1) && (alarmHour == hour) && (alarmMin == min)){
+	if((alarmEnable == 1) && (hour >= alarmHour) && (min >= alarmMin)){
 		Alarm_Sound();
 		MAGENTA_LED();
 	}
 }
 
 void Show_Time(void){
-	for (int i = 0; i < 6; i++) {
-		switch (i) {
-			case 0:
-				SHOW_NUMBER((sec%10), 0);
-				break;
-			case 1:
-				SHOW_NUMBER((sec/10), 1);
-				break;
-			case 2:
-				SHOW_NUMBER((min%10), 2);
-				break;
-			case 3:
-				SHOW_NUMBER((min/10), 3);
-				break;
-			case 4:
-				SHOW_NUMBER((hour%10), 4);
-				break;
-			case 5:
-				SHOW_NUMBER((hour/10), 5);
-				break;
-			default:
-				break;
-		}
+	switch (dispClock) {
+		case 0:
+			SHOW_NUMBER((sec%10), 0);
+			break;
+		case 1:
+			SHOW_NUMBER((sec/10), 1);
+			break;
+		case 2:
+			SHOW_NUMBER((min%10), 2);
+			break;
+		case 3:
+			SHOW_NUMBER((min/10), 3);
+			break;
+		case 4:
+			SHOW_NUMBER((hour%10), 4);
+			break;
+		case 5:
+			SHOW_NUMBER((hour/10), 5);
+			break;
+		default:
+			break;
 	}
+	(dispClock == 5) ? (dispClock = 0) : (dispClock++);
 }
 
-void func(void){
-	Clock_Time();
-	if(us % 2 == 0){
-		Alarm_Sound();
+void Show_Stopwatch(void){
+	switch (dispStp) {
+		case 0:
+			SHOW_NUMBER(((ms_stpwtch%100)/10), 0);
+			break;
+		case 1:
+			SHOW_NUMBER((ms_stpwtch/100), 1);
+			break;
+		case 2:
+			SHOW_NUMBER((sec_stpwtch%10), 2);
+			break;
+		case 3:
+			SHOW_NUMBER((sec_stpwtch/10), 3);
+			break;
+		case 4:
+			SHOW_NUMBER((min_stpwtch%10), 4);
+			break;
+		case 5:
+			SHOW_NUMBER((min_stpwtch/10), 5);
+			break;
+		default:
+			break;
 	}
-	Show_Time();
+	(dispStp == 5) ? (dispStp = 0) : (dispStp++);
+}
+
+void Show_Alarm(void){
+	switch (dispAlarm) {
+		case 2:
+			SHOW_NUMBER((alarmMin%10), 2);
+			break;
+		case 3:
+			SHOW_NUMBER((alarmMin/10), 3);
+			break;
+		case 4:
+			SHOW_NUMBER((alarmHour%10), 4);
+			break;
+		case 5:
+			SHOW_NUMBER((alarmHour/10), 5);
+			break;
+		default:
+			break;
+	}
+	(dispAlarm == 5) ? (dispAlarm = 2) : (dispAlarm++);
+}
+
+void func(void) {
+    Clock_Time();
+    Stopwatch_Time();
+    if (us % 8 == 0) {
+        Alarm();
+    }
+    if (ms % 1 == 0) {
+ 		//Show_Time();
+    	//Show_Stopwatch();
+    	Show_Alarm();
+    }
+    if (!alarm_enabled && (min == 1) && (sec == 3)) {
+        Alarm_Enable();
+        alarm_enabled = true;
+    }
+    if (!alarm_enabled && (min == 10) && (sec == 30)) {
+        Alarm_Enable();
+        alarm_enabled = true;
+    }
+
 }
 
 int main(void) {
@@ -127,6 +210,10 @@ int main(void) {
 	Get_Sine_Values();
 
 	LED_OFF();
+
+	Alarm_Enable();
+	alarmMin = 1;
+	sec = 57;
 
 	PIT_Change_Period(USEC_TO_COUNT(1U, PIT_SOURCE_CLOCK), kPIT_Chnl_0);
 	PIT_SetCallback(func, kPIT_Chnl_0);
