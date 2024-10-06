@@ -1,0 +1,12 @@
+#include "pin_mux.h"
+#include "fsl_debug_console.h"
+#include "clock_config.h"
+#include "board.h"
+#include "fsl_gpio.h"
+#include "fsl_port.h"
+
+
+void DISPLAY_INIT();
+void SHOW_NUMBER(uint8_t number, uint8_t display);
+
+
