@@ -15,6 +15,8 @@
 #include "Drivers/DAC.h"
 #include "Drivers/LED_RGB.h"
 #include "Drivers/display.h"
+#include "Drivers/WDOG.h"
+#include "Drivers/GPIO.h"
 
 #define PI 3.1416
 
@@ -32,6 +34,8 @@ bool alarm_enabled = false;
 
 uint16_t us_stpwtch, ms_stpwtch, sec_stpwtch, min_stpwtch, hour_stpwtch;
 uint8_t dispStp;
+
+uint16_t refreshTime;
 
 void Clock_Time(void){
 	us++;
@@ -183,23 +187,33 @@ void Show_Alarm(void){
 void func(void) {
     Clock_Time();
     Stopwatch_Time();
+    if(ms % refreshTime == 0){
+    	WDOG_RefreshWindow();
+    }
     if (us % 8 == 0) {
         Alarm();
     }
     if (ms % 1 == 0) {
- 		//Show_Time();
-    	//Show_Stopwatch();
-    	Show_Alarm();
+    	if((sec < 20)){
+    		Show_Time();
+    	}
+    	if((sec >= 20) && (sec < 40)){
+    		Show_Alarm();
+    	}
+    	if((sec >= 40) && (sec <= 59)){
+    	   	Show_Stopwatch();
+     	}
     }
-    if (!alarm_enabled && (min == 1) && (sec == 3)) {
-        Alarm_Enable();
-        alarm_enabled = true;
-    }
-    if (!alarm_enabled && (min == 10) && (sec == 30)) {
-        Alarm_Enable();
-        alarm_enabled = true;
-    }
+    CheckWdogReset();
+}
 
+void PORTA_BTNS(uint32_t flags){
+	if(flags == (1 << ALARM_ON_BTN_PIN)){
+		if (!alarm_enabled) {
+		    Alarm_Enable();
+		    alarm_enabled = true;
+		}
+	}
 }
 
 int main(void) {
@@ -207,13 +221,17 @@ int main(void) {
 	DAC_Start();
 	LED_Init();
 	DISPLAY_INIT();
-	Get_Sine_Values();
+	WDOG_InitConfig();
 
+	Get_Sine_Values();
 	LED_OFF();
 
-	Alarm_Enable();
 	alarmMin = 1;
-	sec = 57;
+	sec = 0;
+
+	refreshTime = 300;
+
+	WDOG_SetCallback(YELLOW_LED);
 
 	PIT_Change_Period(USEC_TO_COUNT(1U, PIT_SOURCE_CLOCK), kPIT_Chnl_0);
 	PIT_SetCallback(func, kPIT_Chnl_0);
