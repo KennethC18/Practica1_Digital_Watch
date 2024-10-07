@@ -22,6 +22,7 @@ uint16_t ms, sec, min, hour;
 uint32_t dacValue;
 uint32_t sineValues [360];
 uint8_t index;
+uint8_t pin;
 
 void Clock_Time(void){
 	ms++;
@@ -60,6 +61,18 @@ void Alarm(void){
     (index == 360) ? (index = 0) : (index++);
 }
 
+void GPIOA_BTN(){
+	//
+}
+
+uint8_t GPIOB_BTN(pin){
+	//
+}
+
+uint8_t GPIOC_BTN(pin){
+	//
+}
+
 int main(void) {
 	PIT_Start();
 	DAC_Start();
@@ -71,6 +84,10 @@ int main(void) {
 
 	PIT_Change_Period(USEC_TO_COUNT(PERIODO_ALARMA, PIT_SOURCE_CLOCK), kPIT_Chnl_1);
 	PIT_SetCallback(Alarm, kPIT_Chnl_1);
+
+	GPIO_Set_Callback(GPIOA_BTN, GPIOA);
+	GPIO_Set_Callback(GPIOB_BTN, GPIOB, pin);
+	GPIO_Set_Callback(GPIOB_BTN);
 
 	while(1);
 	return 0;
