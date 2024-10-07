@@ -73,3 +73,8 @@ void SHOW_NUMBER(uint8_t number, uint8_t display){
 	GPIO_PortSet(GPIOC, (1 << display));
 
 }
+
+void DISPLAY_OFF(void){
+	GPIO_PortSet(GPIOD, 0x7F);
+	GPIO_PortClear(GPIOC, 0x3F);  // Apagar PTC0-PTC5 (ánodos)
+}

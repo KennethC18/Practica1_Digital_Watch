@@ -32,7 +32,9 @@ void PIT_Start(void){
 	pit_config_t pitConfig;
 
 	/* Board pin, clock, debug console init */
-	BOARD_InitBootPins();
+	CLOCK_EnableClock(kCLOCK_PortA);
+	PORT_SetPinMux(PORTA, 2U, kPORT_MuxAlt7);
+
 	BOARD_InitBootClocks();
 	BOARD_InitDebugConsole();
 
@@ -53,6 +55,8 @@ void PIT_Start(void){
 	PIT_EnableInterrupts(PIT_BASEADDR, kPIT_Chnl_1, kPIT_TimerInterruptEnable);
 
 	/* Enable at the NVIC */
+	NVIC_SetPriority(PIT0_IRQn, 1);
+	NVIC_SetPriority(PIT1_IRQn, 1);
 	EnableIRQ(PIT0_IRQn);
 	EnableIRQ(PIT1_IRQn);
 

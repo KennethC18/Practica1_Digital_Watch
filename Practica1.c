@@ -21,60 +21,85 @@
 #define PI 3.1416
 
 uint16_t us, ms, sec, min, hour;
-uint8_t dispClock;
 
 uint32_t dacValue;
 uint32_t sineValues [360];
 uint8_t index;
 
 uint8_t alarmHour, alarmMin;
-uint8_t dispAlarm;
 uint8_t alarmEnable;
 bool alarm_enabled = false;
 
-uint16_t us_stpwtch, ms_stpwtch, sec_stpwtch, min_stpwtch, hour_stpwtch;
-uint8_t dispStp;
+uint16_t us_stpwtch, ms_stpwtch, sec_stpwtch, min_stpwtch;
 
 uint16_t refreshTime;
 
-void Clock_Time(void){
-	us++;
-	if(us == 250){
-		ms++;
-		us = 0;
-		if(ms == 1000){
-			sec++;
-			ms = 0;
-			if(sec == 60){
-				min++;
-				sec = 0;
-				if(min == 60){
-					hour++;
-					min = 0;
-					if(hour == 24){
-						hour = 0;
-					}
-				}
-			}
-		}
-	}
+uint8_t dispClock;
+uint8_t dispStp;
+uint8_t dispAlarm;
+uint8_t displaySelection;
+
+bool stpwtchBtnState = false;
+bool alarmBtnState = false;
+bool stpwtchStart = false;
+bool configBtnState = false;
+
+typedef enum _kDisplay_Select
+{
+    display_Clock = 0U,
+    display_Stopwatch,
+    display_Alarm,
+} kDisplay_Select;
+
+void Clock_Time(void) {
+    us++;
+    if (us == 175) {
+        us = 0;
+        ms++;
+    }
+    if (ms == 1000) {
+        ms = 0;
+        sec++;
+    }
+    if (sec == 60) {
+        sec = 0;
+        min++;
+    }
+    if (min == 60) {
+        min = 0;
+        hour++;
+    }
+    if (hour == 24) {
+        hour = 0;
+    }
 }
 
-void Stopwatch_Time(){
-	us_stpwtch++;
-	if(us_stpwtch == 250){
-		ms_stpwtch++;
-		us_stpwtch = 0;
-		if(ms_stpwtch == 1000){
-			sec_stpwtch++;
-			ms_stpwtch = 0;
-			if(sec_stpwtch == 60){
-				min_stpwtch++;
-				sec_stpwtch = 0;
-				if(min_stpwtch == 60){
-				}
-			}
-		}
+void Stopwatch_Time() {
+    us_stpwtch++;
+    if (us_stpwtch == 175) {
+        us_stpwtch = 0;
+        ms_stpwtch++;
+    }
+    if (ms_stpwtch == 1000) {
+        ms_stpwtch = 0;
+        sec_stpwtch++;
+    }
+    if (sec_stpwtch == 60) {
+        sec_stpwtch = 0;
+        min_stpwtch++;
+    }
+    if (min_stpwtch == 60) {
+        min_stpwtch = 0;
+    }
+}
+
+void Alarm_Time(void){
+	if (alarmMin == 60) {
+	    alarmMin = 0;
+		alarmHour++;
+	}
+	if (alarmHour == 24) {
+		alarmHour = 0;
 	}
 }
 
@@ -110,6 +135,7 @@ void Alarm(void){
 		Alarm_Sound();
 		MAGENTA_LED();
 	}
+	//Alarm_Time();
 }
 
 void Show_Time(void){
@@ -166,6 +192,11 @@ void Show_Stopwatch(void){
 
 void Show_Alarm(void){
 	switch (dispAlarm) {
+		case 0:
+			DISPLAY_OFF();
+			break;
+		case 1:
+			DISPLAY_OFF();
 		case 2:
 			SHOW_NUMBER((alarmMin%10), 2);
 			break;
@@ -181,30 +212,22 @@ void Show_Alarm(void){
 		default:
 			break;
 	}
-	(dispAlarm == 5) ? (dispAlarm = 2) : (dispAlarm++);
+	(dispAlarm == 5) ? (dispAlarm = 0) : (dispAlarm++);
 }
 
-void func(void) {
-    Clock_Time();
-    Stopwatch_Time();
-    if(ms % refreshTime == 0){
-    	WDOG_RefreshWindow();
-    }
-    if (us % 8 == 0) {
-        Alarm();
-    }
-    if (ms % 1 == 0) {
-    	if((sec < 20)){
-    		Show_Time();
-    	}
-    	if((sec >= 20) && (sec < 40)){
-    		Show_Alarm();
-    	}
-    	if((sec >= 40) && (sec <= 59)){
-    	   	Show_Stopwatch();
-     	}
-    }
-    CheckWdogReset();
+void Display_Select(void){
+	switch (displaySelection) {
+		case display_Clock:
+			Show_Time();
+			break;
+		case display_Stopwatch:
+			Show_Stopwatch();
+			break;
+		case display_Alarm:
+			Show_Alarm();
+		default:
+			break;
+	}
 }
 
 void PORTA_BTNS(uint32_t flags){
@@ -216,22 +239,121 @@ void PORTA_BTNS(uint32_t flags){
 	}
 }
 
+void PORTB_BTNS(uint32_t flags){
+	switch (flags) {
+		case (1 << CONFIG_BTN_PIN):
+			configBtnState = !configBtnState;
+			break;
+		case (1 << HOUR_START_BTN_PIN):
+			if(alarmBtnState){
+				alarmHour++;
+			}
+			if(stpwtchBtnState){
+				stpwtchStart = true;
+			}
+			if(configBtnState){
+				hour++;
+			}
+			break;
+		case (1 << MIN_STOP_BTN_PIN):
+			if(alarmBtnState){
+				alarmMin++;
+			}
+			if(stpwtchBtnState){
+				stpwtchStart = false;
+			}
+			if(configBtnState){
+				min++;
+			}
+			break;
+		case (1 << CLEAR_BTN_PIN):
+			if (alarm_enabled) {
+			    Alarm_Enable();
+			    alarm_enabled = false;
+			}
+			if(stpwtchBtnState){
+				us_stpwtch = 0;
+				ms_stpwtch = 0;
+				sec_stpwtch = 0;
+				min_stpwtch = 0;
+			}
+			break;
+		default:
+			break;
+	}
+}
+
+void PORTC_BTNS(uint32_t flags){
+	switch (flags) {
+		case (1 << TIME_STOPWATCH_BTN_PIN):
+			if(displaySelection != display_Stopwatch){
+				displaySelection = display_Stopwatch;
+				stpwtchBtnState = true;
+			}
+			else{
+				displaySelection = display_Clock;
+				stpwtchBtnState = false;
+			}
+			break;
+		case (1 << TIME_ALARM_BTN_PIN):
+			if(displaySelection != display_Alarm){
+				displaySelection = display_Alarm;
+				alarmBtnState = true;
+				BLUE_LED();
+			}
+			else{
+				displaySelection = display_Clock;
+				alarmBtnState = false;
+				LED_OFF();
+			}
+			break;
+		case (1 << STOP_BTN_PIN):
+			refreshTime = 1; //Feed watchdog too fast to trigger error
+			break;
+		default:
+			break;
+	}
+}
+
+void func(void) {
+    Clock_Time();
+    if(stpwtchStart){
+    	Stopwatch_Time();
+    }
+    if(ms % refreshTime == 0){
+    	WDOG_RefreshWindow();
+    }
+    if (us % 5 == 0) {
+        Alarm();
+    }
+    if(ms % 1 == 0){
+    	Display_Select();
+    }
+    CheckWdogReset();
+
+}
+
 int main(void) {
 	PIT_Start();
 	DAC_Start();
 	LED_Init();
 	DISPLAY_INIT();
 	WDOG_InitConfig();
+	GPIO_Start();
 
 	Get_Sine_Values();
 	LED_OFF();
 
-	alarmMin = 1;
-	sec = 0;
+	refreshTime = 500; // > 100ms
 
-	refreshTime = 300;
+	alarmHour = 13;
+	alarmMin = 32;
 
 	WDOG_SetCallback(YELLOW_LED);
+
+	GPIO_Set_Callback(PORTA_BTNS, GPIOA);
+	GPIO_Set_Callback(PORTB_BTNS, GPIOB);
+	GPIO_Set_Callback(PORTC_BTNS, GPIOC);
 
 	PIT_Change_Period(USEC_TO_COUNT(1U, PIT_SOURCE_CLOCK), kPIT_Chnl_0);
 	PIT_SetCallback(func, kPIT_Chnl_0);
