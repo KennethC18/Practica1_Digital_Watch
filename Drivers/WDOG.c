@@ -1,76 +1,95 @@
+/*
+ * WDOG.c
+ *
+ *  Created on: 5 oct. 2024
+ *      Author: Kenneth
+ */
+
 #include "WDOG.h"
-#include "fsl_debug_console.h"
-#include "board.h"
-#include "fsl_rcm.h"
-#include "fsl_wdog.h"
 
-// Variables estáticas para el WDOG y el RCM
+// Static variables for WDOG and RCM
 static WDOG_Type *wdog_base = WDOG;
-static RCM_Type *rcm_base   = RCM;
+static RCM_Type *rcm_base = RCM;
 
-void (*wdog_callback)(void) = NULL;
+// Callback function
+typedef void (*WDOG_Callback_t)(void);
+WDOG_Callback_t wdog_callback = NULL;
 
-static void WaitWctClose(WDOG_Type *base)
-{
-    for (uint32_t i = 0; i < WDOG_WCT_INSTRUCTION_COUNT; i++)
-    {
+// Macro for WDOG window value
+#define WDOG_WINDOW_VALUE (100U)
+
+/*!
+ * @brief Waits for the WDOG window close timeout.
+ *
+ * @param base Base address of the WDOG peripheral.
+ */
+static void WaitWctClose(WDOG_Type *base) {
+    for (uint32_t i = 0; i < WDOG_WCT_INSTRUCTION_COUNT; i++) {
         (void)base->RSTCNT;
     }
 }
 
-void WDOG_InitConfig(void)
-{
+/*!
+ * @brief Initializes the WDOG with the default configuration.
+ */
+void WDOG_InitConfig(void) {
     wdog_config_t config;
 
-    // Obtener la configuración por defecto del WDOG
+    // Get the default configuration of the WDOG
     WDOG_GetDefaultConfig(&config);
 
-    // Configurar el timeout total y la ventana de actualización
-    config.timeoutValue     = 0x7ffU;   // Timeout total (por ejemplo, ~2 segundos)
-
-    // Configurar la ventana de actualización en 100 ms
+    // Configure the total timeout and the refresh window
+    config.timeoutValue = 0x7ffU;  // Total timeout (~2 seconds)
     config.enableWindowMode = true;
-    config.windowValue      = WDOG_WINDOW_VALUE;     // Ventana de actualización de 100 ms (100 ticks si el reloj del WDOG es 1 kHz)
+    config.windowValue = WDOG_WINDOW_VALUE;  // Refresh window of 100 ms (100 ticks if WDOG clock is 1 kHz)
 
-    // Inicializar el WDOG con la configuración ajustada
+    // Initialize the WDOG with the configured settings
     WDOG_Init(wdog_base, &config);
 
-    // Esperar a que se cierre el temporizador del WDOG
+    // Wait for the WDOG timer to close
     WaitWctClose(wdog_base);
 }
 
-void WDOG_SetCallback(void (*callback)(void)){
-	wdog_callback = callback;
+/*!
+ * @brief Sets the callback function for WDOG reset.
+ *
+ * @param callback Pointer to the callback function.
+ */
+void WDOG_SetCallback(WDOG_Callback_t callback) {
+    wdog_callback = callback;
 }
 
-void CheckWdogReset(void)
-{
-    // Si el reinicio fue causado por el WDOG
-    if (RCM_GetPreviousResetSources(rcm_base) & kRCM_SourceWdog)
-    {
-        if (wdog_callback != NULL){
-           	wdog_callback();
+/*!
+ * @brief Checks if the last reset was caused by WDOG and triggers the callback if so.
+ */
+void CheckWdogReset(void) {
+    // If the reset was caused by WDOG
+    if (RCM_GetPreviousResetSources(rcm_base) & kRCM_SourceWdog) {
+        if (wdog_callback != NULL) {
+            wdog_callback();
         }
         WDOG_TriggerInfiniteLoop();
     }
 }
 
-void WDOG_RefreshWindow(void)
-{
+/*!
+ * @brief Refreshes the WDOG within the allowed window.
+ */
+void WDOG_RefreshWindow(void) {
     uint32_t current_timer_value = ((uint32_t)wdog_base->TMROUTH << 16U) | wdog_base->TMROUTL;
 
-    // Verificar si estamos dentro de la ventana de actualización
-    if (current_timer_value >= WDOG_WINDOW_VALUE)
-    {
-        WDOG_Refresh(wdog_base);  // Refrescar el WDOG
+    // Check if we are within the refresh window
+    if (current_timer_value >= WDOG_WINDOW_VALUE) {
+        WDOG_Refresh(wdog_base);  // Refresh the WDOG
     }
 }
 
-void WDOG_TriggerInfiniteLoop(void)
-{
-    // Entrar en un lazo infinito
-    while (1)
-    {
-        // El microcontrolador queda bloqueado aquí
+/*!
+ * @brief Triggers an infinite loop to halt the microcontroller.
+ */
+void WDOG_TriggerInfiniteLoop(void) {
+    // Enter an infinite loop
+    while (1) {
+        // The microcontroller stays here
     }
 }

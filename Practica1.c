@@ -318,6 +318,11 @@ void PORTC_BTNS(uint32_t flags){
 	}
 }
 
+void WDOG_ErrorMsg(void){
+	YELLOW_LED();
+	PIT_Change_Period(USEC_TO_COUNT(1000000U, PIT_SOURCE_CLOCK));
+}
+
 void Watch_Functions(void) {
     Clock_Time();
     if(stpwtchStart){
@@ -349,7 +354,7 @@ int main(void) {
 	alarmHour = 0;
 	alarmMin = 1;
 
-	WDOG_SetCallback(YELLOW_LED);
+	WDOG_SetCallback(WDOG_ErrorMsg);
 
 	GPIO_Set_Callback(PORTA_BTNS, GPIOA);
 	GPIO_Set_Callback(PORTB_BTNS, GPIOB);

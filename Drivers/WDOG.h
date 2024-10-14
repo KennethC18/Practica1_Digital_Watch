@@ -1,26 +1,26 @@
+/*
+ * WDOG.h
+ *
+ *  Created on: 5 oct. 2024
+ *      Author: kenneth
+ */
 #ifndef _WDOG_H_
 #define _WDOG_H_
 
 #include "fsl_wdog.h"
-#include "fsl_gpio.h"
-#include "fsl_port.h"
+#include "fsl_rcm.h"
 
-#define WDOG_TIMEOUT_VALUE (0x7ffU)     // Valor del timeout
-#define WDOG_WINDOW_VALUE  (100U)     // Valor de la ventana (100 ms)
+#define WDOG_TIMEOUT_VALUE (0x7ffU)      // Timeout value (~2 seconds)
+#define WDOG_WINDOW_VALUE (100U)         // Window value (100 ms)
 #define WDOG_WCT_INSTRUCTION_COUNT 256U
 
-// Inicializa el WDOG.
+// Watchdog callback type
+typedef void (*WDOG_Callback_t)(void);
+
 void WDOG_InitConfig(void);
-
-// Rutina para verificar si el reinicio fue por el WDOG y encender el LED amarillo.
 void CheckWdogReset(void);
-
-// Refresca el WDOG dentro de la ventana de actualización.
 void WDOG_RefreshWindow(void);
-
-// Función que detiene el programa al activarse el callback desde un botón (e.g., botón STOP).
 void WDOG_TriggerInfiniteLoop(void);
-
-void WDOG_SetCallback(void (*callback)(void));
+void WDOG_SetCallback(WDOG_Callback_t callback);
 
 #endif // _WDOG_H_
