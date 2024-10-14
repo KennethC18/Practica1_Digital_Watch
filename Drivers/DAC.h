@@ -2,7 +2,7 @@
  * DAC.h
  *
  *  Created on: 23 sep. 2024
- *      Author: kenne
+ *      Author: Kenneth
  */
 
 #ifndef DAC_H_
@@ -14,7 +14,8 @@
 #include "board.h"
 #include "fsl_dac.h"
 #include "fsl_common.h"
-#define DEMO_DAC_BASEADDR DAC0
+
+#define DAC_ADDR DAC0
 
 void DAC_Start(void);
 

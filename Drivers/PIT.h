@@ -2,7 +2,7 @@
  * PIT.h
  *
  *  Created on: 23 sep. 2024
- *      Author: kenne
+ *      Author: Kenneth
  */
 
 #ifndef PIT_H_
@@ -14,18 +14,15 @@
 #include "board.h"
 #include "fsl_pit.h"
 
-#define PIT_BASEADDR PIT
-
+#define PIT_ADDR PIT
 /* Get source clock for PIT driver */
 #define PIT_SOURCE_CLOCK CLOCK_GetFreq(kCLOCK_BusClk)
 
+typedef void (*PIT_Callback_t)(void);
+
 void PIT0_IRQHandler(void);
-void PIT1_IRQHandler(void);
-
 void PIT_Start(void);
-
-void PIT_Change_Period(uint16_t period, pit_chnl_t channel);
-
-void PIT_SetCallback(void (*callback)(void), pit_chnl_t channel);
+void PIT_Change_Period(uint16_t period);
+void PIT_SetCallback(PIT_Callback_t callback);
 
 #endif /* PIT_H_ */

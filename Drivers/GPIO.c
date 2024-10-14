@@ -2,24 +2,29 @@
  * GPIO.c
  *
  *  Created on: 26 Sept 2024
- *      Author: kenneth
+ *      Author: Kenneth
  */
 #include "GPIO.h"
 
-void (*Port_A_Callback)(uint32_t) = NULL;
-void (*Port_B_Callback)(uint32_t) = NULL;
-void (*Port_C_Callback)(uint32_t) = NULL;
+GPIO_Callback_t Port_A_Callback = NULL;
+GPIO_Callback_t Port_B_Callback = NULL;
+GPIO_Callback_t Port_C_Callback = NULL;
 
 uint32_t PORTA_flags, PORTB_flags, PORTC_flags;
 
-void GPIO_Set_Callback(void (*callback)(uint32_t), GPIO_Type *base){
-	if(base == GPIOA){
+/*!
+ * brief Sets the callback function to the indicated GPIO port.
+ *
+ * param dacValue Setting the value for the next item in the buffer.
+ */
+void GPIO_Set_Callback(GPIO_Callback_t callback, GPIO_Type *GPIO){
+	if(GPIO == GPIOA){
 		Port_A_Callback = callback;
 	}
-	else if(base == GPIOB){
+	else if(GPIO == GPIOB){
 		Port_B_Callback = callback;
 	}
-	else if(base == GPIOC){
+	else if(GPIO == GPIOC){
 		Port_C_Callback = callback;
 	}
 	else{
@@ -29,6 +34,9 @@ void GPIO_Set_Callback(void (*callback)(uint32_t), GPIO_Type *base){
 	}
 }
 
+/*!
+ * @brief Handle interrupts from the GPIO Port A.
+ */
 void PORTA_IRQHandler(void)
 {
 	PORTA_flags = GPIO_PortGetInterruptFlags(GPIOA);
@@ -43,6 +51,9 @@ void PORTA_IRQHandler(void)
     SDK_ISR_EXIT_BARRIER;
 }
 
+/*!
+ * @brief Handle interrupts from the GPIO Port B.
+ */
 void PORTB_IRQHandler(void)
 {
 	PORTB_flags = GPIO_PortGetInterruptFlags(GPIOB);
@@ -57,6 +68,9 @@ void PORTB_IRQHandler(void)
     SDK_ISR_EXIT_BARRIER;
 }
 
+/*!
+ * @brief Handle interrupts from the GPIO Port C.
+ */
 void PORTC_IRQHandler(void)
 {
 	PORTC_flags = GPIO_PortGetInterruptFlags(GPIOC);
@@ -71,6 +85,9 @@ void PORTC_IRQHandler(void)
     SDK_ISR_EXIT_BARRIER;
 }
 
+/*!
+ * @brief Set default configuration and initialise GPIO.
+ */
 void GPIO_Start(void){
 	/* Define the init structure for the input switch pin */
 	gpio_pin_config_t sw_config = {
@@ -78,6 +95,7 @@ void GPIO_Start(void){
 		0,
 	};
 
+	/* Configuration for input pin */
 	const port_pin_config_t pcr_port_sw_config = {
 		kPORT_PullUp,
 		kPORT_FastSlewRate,
@@ -88,13 +106,14 @@ void GPIO_Start(void){
 		kPORT_UnlockRegister
 	};
 
+	/* Enable port clocks */
 	CLOCK_EnableClock(kCLOCK_PortA);
 	CLOCK_EnableClock(kCLOCK_PortB);
 	CLOCK_EnableClock(kCLOCK_PortC);
 
 	BOARD_InitBootClocks();
-	BOARD_InitDebugConsole();
 
+	/* Button pin input configuration*/
 	PORT_SetPinConfig(TIME_STOPWATCH_BTN_PORT, TIME_STOPWATCH_BTN_PIN, &pcr_port_sw_config);
 	PORT_SetPinConfig(TIME_ALARM_BTN_PORT, TIME_ALARM_BTN_PIN, &pcr_port_sw_config);
 	PORT_SetPinConfig(CONFIG_BTN_PORT, CONFIG_BTN_PIN, &pcr_port_sw_config);
@@ -104,6 +123,7 @@ void GPIO_Start(void){
 	PORT_SetPinConfig(ALARM_ON_BTN_PORT, ALARM_ON_BTN_PIN, &pcr_port_sw_config);
 	PORT_SetPinConfig(STOP_BTN_PORT, STOP_BTN_PIN, &pcr_port_sw_config);
 
+	/* Button pin interrupt configuration */
 	PORT_SetPinInterruptConfig(TIME_STOPWATCH_BTN_PORT, TIME_STOPWATCH_BTN_PIN, kPORT_InterruptFallingEdge);
 	PORT_SetPinInterruptConfig(TIME_ALARM_BTN_PORT, TIME_ALARM_BTN_PIN, kPORT_InterruptFallingEdge);
 	PORT_SetPinInterruptConfig(CONFIG_BTN_PORT, CONFIG_BTN_PIN, kPORT_InterruptFallingEdge);
@@ -113,11 +133,15 @@ void GPIO_Start(void){
 	PORT_SetPinInterruptConfig(ALARM_ON_BTN_PORT, ALARM_ON_BTN_PIN, kPORT_InterruptFallingEdge);
 	PORT_SetPinInterruptConfig(STOP_BTN_PORT, STOP_BTN_PIN, kPORT_InterruptFallingEdge);
 
+	/* Button ports interrupt priority configuration */
+	NVIC_SetPriority(PORTA_IRQn, 0);
     EnableIRQ(PORTA_IRQn);
+    NVIC_SetPriority(PORTB_IRQn, 0);
     EnableIRQ(PORTB_IRQn);
+    NVIC_SetPriority(PORTC_IRQn, 0);
     EnableIRQ(PORTC_IRQn);
 
-    /*buttons INIT*/
+    /* Button pins initialisation */
     GPIO_PinInit(TIME_STOPWATCH_BTN_PORT, TIME_STOPWATCH_BTN_PIN, &sw_config);
     GPIO_PinInit(TIME_ALARM_BTN_PORT, TIME_ALARM_BTN_PIN, &sw_config);
     GPIO_PinInit(CONFIG_BTN_PORT, CONFIG_BTN_PIN, &sw_config);

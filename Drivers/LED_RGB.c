@@ -2,15 +2,17 @@
  * LED_RGB.c
  *
  *  Created on: 26 Sept 2024
- *      Author: kenneth
+ *      Author: Kenneth
  */
 #include "LED_RGB.h"
 
+/*!
+ * @brief Initialise board RGB LED with default configurations.
+ */
 void LED_Init(void){
-	/* Define the init structure for the output LED pin*/
-	gpio_pin_config_t led_config = {
-		kGPIO_DigitalOutput,
-	    0,
+	// Configuration for LED pins
+	LedConfig led_config = {
+	    .config = { kGPIO_DigitalOutput, 1 }  // Pin direction as output, Initial logic state = 1 (off)
 	};
 
 	/* Port B Clock Gate Control: Clock enabled */
@@ -23,7 +25,6 @@ void LED_Init(void){
 	PORT_SetPinMux(PORTB, 21U, kPORT_MuxAsGpio);
 
 	BOARD_InitBootClocks();
-	BOARD_InitDebugConsole();
 
 	/* Init output LED GPIO. */
 	GPIO_PinInit(BOARD_LED_RED_GPIO, BOARD_LED_RED_GPIO_PIN, &led_config);
@@ -31,45 +32,69 @@ void LED_Init(void){
 	GPIO_PinInit(BOARD_LED_BLUE_GPIO, BOARD_LED_BLUE_GPIO_PIN, &led_config);
 }
 
+/*!
+ * @brief Turns off the board LED entirely.
+ */
 void LED_OFF(void){
 	GPIO_PinWrite(BOARD_LED_RED_GPIO, BOARD_LED_RED_GPIO_PIN, 1);
 	GPIO_PinWrite(BOARD_LED_GREEN_GPIO, BOARD_LED_GREEN_GPIO_PIN, 1);
 	GPIO_PinWrite(BOARD_LED_BLUE_GPIO, BOARD_LED_BLUE_GPIO_PIN, 1);
 }
 
+/*!
+ * @brief Turns on only the red board LED.
+ */
 void RED_LED(void){
 	LED_OFF();
 	GPIO_PinWrite(BOARD_LED_RED_GPIO, BOARD_LED_RED_GPIO_PIN, 0);
 }
 
+/*!
+ * @brief Turns on only the green board LED.
+ */
 void GREEN_LED(void){
 	LED_OFF();
 	GPIO_PinWrite(BOARD_LED_GREEN_GPIO, BOARD_LED_GREEN_GPIO_PIN, 0);
 }
 
+/*!
+ * @brief Turns on only the blue board LED.
+ */
 void BLUE_LED(void){
 	LED_OFF();
 	GPIO_PinWrite(BOARD_LED_BLUE_GPIO, BOARD_LED_BLUE_GPIO_PIN, 0);
 }
 
+/*!
+ * @brief Turns on both the red and blue board LED's to display magenta.
+ */
 void MAGENTA_LED(void){
 	LED_OFF();
 	GPIO_PinWrite(BOARD_LED_RED_GPIO, BOARD_LED_RED_GPIO_PIN, 0);
 	GPIO_PinWrite(BOARD_LED_BLUE_GPIO, BOARD_LED_BLUE_GPIO_PIN, 0);
 }
 
+/*!
+ * @brief Turns on both the red and green board LED's to display yellow.
+ */
 void YELLOW_LED(void){
 	LED_OFF();
 	GPIO_PinWrite(BOARD_LED_RED_GPIO, BOARD_LED_RED_GPIO_PIN, 0);
 	GPIO_PinWrite(BOARD_LED_GREEN_GPIO, BOARD_LED_GREEN_GPIO_PIN, 0);
 }
 
+/*!
+ * @brief Turns on both the green and blue board LED's to display cian.
+ */
 void CIAN_LED(void){
 	LED_OFF();
 	GPIO_PinWrite(BOARD_LED_GREEN_GPIO, BOARD_LED_GREEN_GPIO_PIN, 0);
 	GPIO_PinWrite(BOARD_LED_BLUE_GPIO, BOARD_LED_BLUE_GPIO_PIN, 0);
 }
 
+/*!
+ * @brief Turns on all board LED's to display white.
+ */
 void WHITE_LED(void){
 	LED_OFF();
 	GPIO_PinWrite(BOARD_LED_RED_GPIO, BOARD_LED_RED_GPIO_PIN, 0);
