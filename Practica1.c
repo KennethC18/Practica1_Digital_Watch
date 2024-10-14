@@ -131,11 +131,10 @@ void Alarm_Enable(){
 }
 
 void Alarm(void){
-	if((alarmEnable == 1) && (hour >= alarmHour) && (min >= alarmMin)){
+	if((alarmEnable == 1) && (hour == alarmHour) && (min == alarmMin)){
 		Alarm_Sound();
 		MAGENTA_LED();
 	}
-	//Alarm_Time();
 }
 
 void Show_Time(void){
@@ -243,10 +242,12 @@ void PORTB_BTNS(uint32_t flags){
 	switch (flags) {
 		case (1 << CONFIG_BTN_PIN):
 			configBtnState = !configBtnState;
+			(configBtnState) ? (CIAN_LED()): (LED_OFF());
 			break;
 		case (1 << HOUR_START_BTN_PIN):
 			if(alarmBtnState){
 				alarmHour++;
+				Alarm_Time();
 			}
 			if(stpwtchBtnState){
 				stpwtchStart = true;
@@ -258,6 +259,7 @@ void PORTB_BTNS(uint32_t flags){
 		case (1 << MIN_STOP_BTN_PIN):
 			if(alarmBtnState){
 				alarmMin++;
+				Alarm_Time();
 			}
 			if(stpwtchBtnState){
 				stpwtchStart = false;
@@ -284,6 +286,7 @@ void PORTB_BTNS(uint32_t flags){
 }
 
 void PORTC_BTNS(uint32_t flags){
+
 	switch (flags) {
 		case (1 << TIME_STOPWATCH_BTN_PIN):
 			if(displaySelection != display_Stopwatch){
@@ -315,7 +318,7 @@ void PORTC_BTNS(uint32_t flags){
 	}
 }
 
-void func(void) {
+void Watch_Functions(void) {
     Clock_Time();
     if(stpwtchStart){
     	Stopwatch_Time();
@@ -329,8 +332,6 @@ void func(void) {
     if(ms % 1 == 0){
     	Display_Select();
     }
-    CheckWdogReset();
-
 }
 
 int main(void) {
@@ -342,12 +343,11 @@ int main(void) {
 	GPIO_Start();
 
 	Get_Sine_Values();
-	LED_OFF();
 
 	refreshTime = 500; // > 100ms
 
-	alarmHour = 13;
-	alarmMin = 32;
+	alarmHour = 0;
+	alarmMin = 1;
 
 	WDOG_SetCallback(YELLOW_LED);
 
@@ -355,9 +355,11 @@ int main(void) {
 	GPIO_Set_Callback(PORTB_BTNS, GPIOB);
 	GPIO_Set_Callback(PORTC_BTNS, GPIOC);
 
-	PIT_Change_Period(USEC_TO_COUNT(1U, PIT_SOURCE_CLOCK), kPIT_Chnl_0);
-	PIT_SetCallback(func, kPIT_Chnl_0);
+	PIT_Change_Period(USEC_TO_COUNT(1U, PIT_SOURCE_CLOCK));
+	PIT_SetCallback(Watch_Functions);
 
-	while(1);
+	while(1){
+		CheckWdogReset();
+	}
 	return 0;
 }
